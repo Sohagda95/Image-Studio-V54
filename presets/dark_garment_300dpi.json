@@ -1,0 +1,13 @@
+{
+  "name": "Dark Garment Screen Print 300dpi",
+  "version": "V9",
+  "settings": {
+    "garment": "Black",
+    "dpi": 300,
+    "underbase": "Adaptive",
+    "underbase_strength": 90,
+    "underbase_choke": 1,
+    "halftone_cell": 18,
+    "screen_angle": 22.5
+  }
+}

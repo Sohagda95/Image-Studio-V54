@@ -1,0 +1,66 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pyinstaller
+
+      - name: Compile-check Python sources
+        shell: pwsh
+        run: |
+          python -m compileall -q .
+
+      - name: Run core V53 self-test
+        shell: pwsh
+        run: |
+          python -c "from production_v53 import self_test; r=self_test(); print(r); raise SystemExit(1 if r['summary']['failed'] else 0)"
+
+      - name: Static UI contract test
+        shell: pwsh
+        run: |
+          python verify_ui_contract.py
+
+      - name: Dependency and app import smoke test
+        shell: pwsh
+        run: |
+          python -c "import numpy, PIL, PySide6; import app; print('Dependency/import smoke test: PASS')"
+
+      - name: Build EXE
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --clean ImageStudio.spec
+
+      - name: Create portable package
+        shell: pwsh
+        run: |
+          Copy-Item launch_windows.bat dist/ImageStudio/launch_windows.bat -Force
+          Copy-Item README_GITHUB_BUILD.md dist/ImageStudio/README_GITHUB_BUILD.md -Force
+          Compress-Archive -Path dist/ImageStudio/* -DestinationPath ImageStudio-Windows.zip -Force
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImageStudio-Windows
+          path: ImageStudio-Windows.zip
+          if-no-files-found: error
